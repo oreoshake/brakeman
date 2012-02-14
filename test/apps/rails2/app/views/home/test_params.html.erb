@@ -8,3 +8,11 @@ More: <%= @indirect %>
 And: <%= params[:x][:y] %>
 
 Should not warn: <%= link_to h(params[:blah]), "some_url" %>
+
+Not-so-dangerous href: <%= link_to "donkey", ensure_valid_proto!(params[:bad], :js) %>
+
+Dangerous href: <%= link_to "donkey", params[:bad] %>
+
+Still dangerous hrefs: <%= link_to "donkey", h(params[:bad]) %>
+
+
