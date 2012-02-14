@@ -7,8 +7,6 @@ require 'brakeman/checks/check_cross_site_scripting'
 class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
   Brakeman::Checks.add self
 
-  REGISTERED_URL_CLEANERS = [:ensure_valid_proto!]
-
   @description = "Checks for XSS in link_to in versions before 3.0"
 
   def run_check
@@ -56,24 +54,24 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
     return if (tracker.options[:url_safe_methods] || []).detect {|method| include_target?(second_arg, method)}
 
     # rename or don't reuse, confusing
-    process_link_text(second_arg, result)
+    process_link_text(second_arg, result, 'Unsafe', 'link_to href')
 
     # add it for other tests
     @ignore_methods << :h
   end
 
-  def process_link_text(call, result)
+  def process_link_text(call, result, adjective = 'Unescaped', target = 'link_to')
     first_arg = process call
     type, match = has_immediate_user_input? first_arg
 
     if type
       case type
       when :params
-        message = "Unescaped parameter value in link_to"
+        message = "#{adjective} parameter value in #{target}"
       when :cookies
-        message = "Unescaped cookie value in link_to"
+        message = "#{adjective} cookie value in #{target}"
       else
-        message = "Unescaped user input value in link_to"
+        message = "#{adjective} user input value in #{target}"
       end
 
       unless duplicate? result
@@ -97,16 +95,16 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
         end
         warn :result => result,
           :warning_type => "Cross Site Scripting", 
-          :message => "Unescaped model attribute in link_to",
+          :message => "#{adjective} model attribute in #{target}",
           :confidence => confidence
       end
 
     elsif @matched
       
       if @matched == :model and not tracker.options[:ignore_model_output]
-        message = "Unescaped model attribute in link_to"
+        message = "#{adjective} model attribute in #{target}"
       elsif @matched == :params
-        message = "Unescaped parameter value in link_to"
+        message = "#{adjective} parameter value in #{target}"
       end
 
       if message and not duplicate? result
