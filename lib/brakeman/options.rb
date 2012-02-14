@@ -93,6 +93,12 @@ module Brakeman::Options
           options[:skip_libs] = true
         end
 
+        opts.on "--url-safe-methods method1,method2,etc", Array, "Do not warn of XSS if the link_to href parameter is wrapped in a safe method" do |methods|
+          puts methods
+          options[:url_safe_methods] ||= Set.new
+          options[:url_safe_methods].merge methods.map {|e| e.to_sym }
+        end
+
         opts.on "-t", "--test Check1,Check2,etc", Array, "Only run the specified checks" do |checks|
           checks.each_with_index do |s, index|
             if s[0,5] != "Check"

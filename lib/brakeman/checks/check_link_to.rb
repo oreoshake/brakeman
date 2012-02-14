@@ -38,29 +38,45 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
     #an ignored method call by the code above.
     call = result[:call] = result[:call].dup
 
-    @matched = false
-
     return if call[3][1].nil?
 
-    #Only check first argument for +link_to+, as the second
-    #will *usually* be a record or escaped.
-    first_arg = process call[3][1]
+    @matched = false
+    process_link_text(call[3][1], result)
+    @matched = false
+    process_link_href(call[3][2], result)
+  end
 
+  def process_link_href(call, result)
+    # temporarily remove because of different context, refactor
+    swap = @ignore_methods.clone
+    @ignore_methods.reject!{|item| [:h, :escapeHTML].include? item}
+    @ignore_methods = @ignore_methods.merge(tracker.options[:url_safe_methods])
+
+    second_arg = process call
+
+    # rename or don't reuse, confusing
+    process_link_text(second_arg, result, 'Unsafe', 'link_to href')
+
+    # add it for other tests
+    @ignore_methods = swap
+  end
+
+  def process_link_text(call, result, adjective = 'Unescaped', target = 'link_to')
+    first_arg = process call
     type, match = has_immediate_user_input? first_arg
 
     if type
       case type
       when :params
-        message = "Unescaped parameter value in link_to"
+        message = "#{adjective} parameter value in #{target}"
       when :cookies
-        message = "Unescaped cookie value in link_to"
+        message = "#{adjective} cookie value in #{target}"
       else
-        message = "Unescaped user input value in link_to"
+        message = "#{adjective} user input value in #{target}"
       end
 
       unless duplicate? result
         add_result result
-
         warn :result => result,
           :warning_type => "Cross Site Scripting", 
           :message => message,
@@ -69,7 +85,7 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
 
     elsif not tracker.options[:ignore_model_output] and match = has_immediate_model?(first_arg)
       method = match[2]
-
+      
       unless duplicate? result or IGNORE_MODEL_METHODS.include? method
         add_result result
 
@@ -78,23 +94,23 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
         else
           confidence = CONFIDENCE[:med]
         end
-
         warn :result => result,
           :warning_type => "Cross Site Scripting", 
-          :message => "Unescaped model attribute in link_to",
+          :message => "#{adjective} model attribute in #{target}",
           :confidence => confidence
       end
 
     elsif @matched
+      
       if @matched == :model and not tracker.options[:ignore_model_output]
-        message = "Unescaped model attribute in link_to"
+        message = "#{adjective} model attribute in #{target}"
       elsif @matched == :params
-        message = "Unescaped parameter value in link_to"
+        message = "#{adjective} parameter value in #{target}"
       end
 
       if message and not duplicate? result
         add_result result
-
+      
         warn :result => result, 
           :warning_type => "Cross Site Scripting", 
           :message => message,
