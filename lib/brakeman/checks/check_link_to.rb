@@ -7,6 +7,8 @@ require 'brakeman/checks/check_cross_site_scripting'
 class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
   Brakeman::Checks.add self
 
+  REGISTERED_URL_CLEANERS = [:ensure_valid_proto!]
+
   @description = "Checks for XSS in link_to in versions before 3.0"
 
   def run_check
@@ -38,14 +40,21 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
     #an ignored method call by the code above.
     call = result[:call] = result[:call].dup
 
-    @matched = false
-
     return if call[3][1].nil?
 
-    #Only check first argument for +link_to+, as the second
-    #will *usually* be a record or escaped.
-    first_arg = process call[3][1]
+    @matched = false
+    process_link_text(process(call[3][1]), result)
+    @matched = false
+    process_link_href(process(call[3][2]), result)
+  end
 
+  def process_link_href(second_arg, result)
+    return if (tracker.options[:url_safe_methods] || []).detect {|method| include_target?(second_arg, method)}
+  
+    process_link_text(second_arg, result)
+  end
+
+  def process_link_text(first_arg, result)
     type, match = has_immediate_user_input? first_arg
 
     if type
@@ -60,7 +69,6 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
 
       unless duplicate? result
         add_result result
-
         warn :result => result,
           :warning_type => "Cross Site Scripting", 
           :message => message,
@@ -69,7 +77,7 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
 
     elsif not tracker.options[:ignore_model_output] and match = has_immediate_model?(first_arg)
       method = match[2]
-
+      
       unless duplicate? result or IGNORE_MODEL_METHODS.include? method
         add_result result
 
@@ -86,6 +94,7 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
       end
 
     elsif @matched
+      
       if @matched == :model and not tracker.options[:ignore_model_output]
         message = "Unescaped model attribute in link_to"
       elsif @matched == :params
@@ -94,7 +103,7 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
 
       if message and not duplicate? result
         add_result result
-
+      
         warn :result => result, 
           :warning_type => "Cross Site Scripting", 
           :message => message,
