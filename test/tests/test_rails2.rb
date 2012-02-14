@@ -11,13 +11,13 @@ class Rails2Tests < Test::Unit::TestCase
       @expected ||= {
         :controller => 1,
         :model => 2,
-        :template => 21,
+        :template => 22,
         :warning => 22 }
     else
       @expected ||= {
         :controller => 1,
         :model => 2,
-        :template => 21,
+        :template => 22,
         :warning => 23 }
     end
   end

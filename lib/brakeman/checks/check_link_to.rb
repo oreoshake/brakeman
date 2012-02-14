@@ -43,18 +43,27 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
     return if call[3][1].nil?
 
     @matched = false
-    process_link_text(process(call[3][1]), result)
+    process_link_text(call[3][1], result)
     @matched = false
-    process_link_href(process(call[3][2]), result)
+    process_link_href(call[3][2], result)
   end
 
-  def process_link_href(second_arg, result)
+  def process_link_href(call, result)
+    # temporarily remove and add, refactor
+    @ignore_methods.reject!{|item| [:h, :escapeHTML].include? item}
+
+    second_arg = process call
     return if (tracker.options[:url_safe_methods] || []).detect {|method| include_target?(second_arg, method)}
-  
+
+    # rename or don't reuse, confusing
     process_link_text(second_arg, result)
+
+    # add it for other tests
+    @ignore_methods << :h
   end
 
-  def process_link_text(first_arg, result)
+  def process_link_text(call, result)
+    first_arg = process call
     type, match = has_immediate_user_input? first_arg
 
     if type
@@ -86,7 +95,6 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
         else
           confidence = CONFIDENCE[:med]
         end
-
         warn :result => result,
           :warning_type => "Cross Site Scripting", 
           :message => "Unescaped model attribute in link_to",
