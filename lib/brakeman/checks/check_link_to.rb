@@ -47,17 +47,18 @@ class Brakeman::CheckLinkTo < Brakeman::CheckCrossSiteScripting
   end
 
   def process_link_href(call, result)
-    # temporarily remove and add, refactor
+    # temporarily remove because of different context, refactor
+    swap = @ignore_methods.clone
     @ignore_methods.reject!{|item| [:h, :escapeHTML].include? item}
+    @ignore_methods = @ignore_methods.merge(tracker.options[:url_safe_methods])
 
     second_arg = process call
-    return if (tracker.options[:url_safe_methods] || []).detect {|method| include_target?(second_arg, method)}
 
     # rename or don't reuse, confusing
     process_link_text(second_arg, result, 'Unsafe', 'link_to href')
 
     # add it for other tests
-    @ignore_methods << :h
+    @ignore_methods = swap
   end
 
   def process_link_text(call, result, adjective = 'Unescaped', target = 'link_to')
