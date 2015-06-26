@@ -83,4 +83,8 @@ class UsersController < ApplicationController
     open("#{params[:x]}/something/something") # remote code execution warning
     open("some_path/#{params[:x]}/something/something") # file access warning
   end
+
+  def test_render_inline
+    render :inline => "<%= xss.html_safe %>", :content_type => "text/html", :locals => {:xss => params[:xss]}
+  end
 end

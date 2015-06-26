@@ -83,6 +83,17 @@ class Rails4Tests < Test::Unit::TestCase
       :relative_path => "config/initializers/secret_token.rb"
   end
 
+  def test_render_inline_processing
+    assert_no_warning :type => :controller,
+      :warning_code => 2,
+      :fingerprint => "",
+      :warning_type => "Cross Site Scripting",
+      :line => 88,
+      :message => /^Unescaped parameter value/,
+      :confidence => 0,
+      :relative_path => "app/controllers/users_controller.rb"
+  end
+
   def test_json_escaped_by_default_in_rails_4
     assert_no_warning :type => :template,
       :warning_code => 5,
@@ -683,7 +694,7 @@ class Rails4Tests < Test::Unit::TestCase
       :confidence => 0,
       :relative_path => "app/models/user.rb"
   end
- 
+
   def test_format_validation_model_alias_processing
     assert_warning :type => :model,
       :warning_code => 30,
